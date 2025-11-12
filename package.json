@@ -2,13 +2,13 @@
   "name": "template",
   "private": true,
   "scripts": {
-    "dev": "bun --bun next dev",
-    "build": "bun --bun next build",
-    "start": "bun --bun next start",
-    "db:generate": "bun --bun prisma generate",
-    "db:push": "bun --bun prisma db push",
-    "docker:build": "docker build -t template .",
-    "docker:run": "docker run -p 3000:3000 template"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "db:generate": "prisma generate",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:reset": "prisma migrate reset"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^6.19.0",
