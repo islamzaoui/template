@@ -11,6 +11,7 @@ export const env = createEnv({
 		SMTP_PORT: z.coerce.number().optional(),
 		SMTP_USER: z.string().optional(),
 		SMTP_PASS: z.string().optional(),
+		SMTP_FROM: z.string().optional(),
 	},
 	client: {},
 	runtimeEnv: {
@@ -20,5 +21,6 @@ export const env = createEnv({
 		SMTP_PORT: process.env.SMTP_PORT,
 		SMTP_USER: process.env.SMTP_USER,
 		SMTP_PASS: process.env.SMTP_PASS,
+		SMTP_FROM: process.env.SMTP_FROM,
 	},
 });

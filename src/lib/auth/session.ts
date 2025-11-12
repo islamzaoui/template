@@ -1,5 +1,5 @@
-import { prisma } from "../db";
 import { Session, User } from "@/generated/prisma/client";
+import { prisma } from "../db";
 
 export const INACTIVE_TIMEOUT_IN_SECONDS = 60 * 60 * 24 * 7;
 export const ACTIVITY_CHECK_INTERVAL_IN_SECONDS = 60 * 60;

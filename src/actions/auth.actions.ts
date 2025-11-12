@@ -4,7 +4,7 @@ import { sessionCookie } from "@/lib/auth/cookie";
 import { createSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import requireValidation from "@/lib/helpers/require-validation";
-import { mailer } from "@/lib/mailer";
+import { sendOTPEmail } from "@/lib/mail";
 import {
 	SendOTP,
 	SendOTPSchema,
@@ -43,15 +43,11 @@ export async function sendOTP(data: SendOTP) {
 			create: { userId: user.id, code, expiresAt },
 		});
 
-		if (mailer) {
-			await mailer.sendMail({
-				to: result.data.email,
-				subject: "Your One-Time Password (OTP)",
-				text: `Your OTP code is: ${oneTimePassword.code}. It will expire in ${VERIFICATION_CODE_EXPIRATION_IN_MINUTES} minutes.`,
-			});
-		} else {
-			console.warn("Mailer is not configured. OTP code:", code);
-		}
+		await sendOTPEmail({
+			to: user.email,
+			code: oneTimePassword.code,
+			expirationInMinutes: VERIFICATION_CODE_EXPIRATION_IN_MINUTES,
+		});
 
 		return { success: true };
 	} catch (err) {
