@@ -1,10 +1,8 @@
 "use client";
 
-import { z } from "zod";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, easeOut, motion as m, stagger } from "motion/react";
 import {
 	Form,
@@ -22,19 +20,15 @@ import {
 } from "@/components/ui/input-otp";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { CircleAlert, Loader2 } from "lucide-react";
-
-const emailSchema = z.object({
-	email: z.string().email({
-		message: "Please enter a valid email address.",
-	}),
-});
+import { sendOTP, verifyOTP } from "@/actions/auth.actions";
+import { useRouter } from "next/navigation";
 
 const container = {
 	hidden: {},
 	show: {
 		transition: {
 			when: "beforeChildren",
-			delayChildren: stagger(0.05),
+			delayChildren: stagger(0.1),
 		},
 	},
 };
@@ -44,7 +38,7 @@ const item = {
 	show: {
 		opacity: 1,
 		y: 0,
-		transition: { duration: 0.2, ease: easeOut },
+		transition: { duration: 0.4, ease: easeOut },
 	},
 };
 
@@ -54,34 +48,49 @@ export function AuthForm() {
 	const [otp, setOtp] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [isSubmittingOtp, setIsSubmittingOtp] = useState(false);
+	const [otpError, setOtpError] = useState<string | null>(null);
+	const router = useRouter();
 
-	const emailForm = useForm<z.infer<typeof emailSchema>>({
-		resolver: zodResolver(emailSchema),
+	const emailForm = useForm<{ email: string }>({
 		defaultValues: {
 			email: "",
 		},
-		reValidateMode: 'onSubmit'
 	});
 
-	const onEmailSubmit = async (values: z.infer<typeof emailSchema>) => {
-		setIsLoading(true); // Set loading state for email submission
-		console.log("Email submitted:", values.email);
-		await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulate API call
-		setStep(2);
-		setIsLoading(false); // Reset loading state
+	const onEmailSubmit = async (values: { email: string }) => {
+		setIsLoading(true);
+		setOtpError(null);
+		const result = await sendOTP({ email: values.email });
+		if (result.success) {
+			setStep(2);
+		} else {
+			const errorResult = result as any;
+			const errorMessage = errorResult.issues?.email?.[0] || errorResult.message || "An unknown error occurred.";
+			emailForm.setError("email", {
+				type: "server",
+				message: errorMessage,
+			});
+		}
+		setIsLoading(false);
 	};
 
 	const onOtpSubmit = async (otpValue: string) => {
 		setIsSubmittingOtp(true);
-		console.log("OTP submitted:", otpValue);
-		await new Promise((resolve) => setTimeout(resolve, 1500));
-		alert("OTP Verified (simulated)");
+		setOtpError(null);
+		const email = emailForm.getValues("email");
+		const result = await verifyOTP({ email, code: otpValue });
+
+		if (result.success) {
+			router.push("/");
+			router.refresh();
+		} else {
+			const errorResult = result as any;
+			setOtpError(errorResult.message || "Failed to verify OTP.");
+			setOtp("");
+		}
 		setIsSubmittingOtp(false);
 	};
 
-	useEffect(() => {
-		console.log(emailForm.formState.errors);
-	})
 	return (
 		<m.div
 			className="flex flex-col items-center justify-center space-y-4 w-[380px]"
@@ -99,7 +108,7 @@ export function AuthForm() {
 						initial={{ opacity: 0, y: 10 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: -10 }}
-						transition={{ duration: 0.2 }}
+						transition={{ duration: 0.4 }}
 						className="w-full flex flex-col items-center space-y-2"
 					>
 						<h1 className="text-xl font-semibold">Welcome to App</h1>
@@ -114,12 +123,16 @@ export function AuthForm() {
 						initial={{ opacity: 0, y: 10 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: -10 }}
-						transition={{ duration: 0.2 }}
+						transition={{ duration: 0.4 }}
 						className="w-full flex flex-col items-center space-y-2"
 					>
 						<h1 className="text-xl font-semibold">Check your email</h1>
-						<p className="text-base text-muted-foreground">
-							We&apos;ve sent a 6-character code to your email.
+						<p className="text-base text-muted-foreground text-center">
+							We&apos;ve sent a 6-character code to{" "}
+							<span className="font-semibold text-foreground">
+								{emailForm.getValues("email")}
+							</span>
+							.
 						</p>
 					</m.div>
 				)}
@@ -130,7 +143,7 @@ export function AuthForm() {
 						<m.div
 							key="email-step"
 							exit={{ opacity: 0, y: -10, willChange: "transform, opacity" }}
-							transition={{ duration: 0.2 }}
+							transition={{ duration: 0.4 }}
 						>
 							<Form {...emailForm}>
 								<m.form
@@ -202,10 +215,10 @@ export function AuthForm() {
 							animate={{ opacity: 1, y: 0 }}
 							style={{ willChange: "transform, opacity" }}
 							exit={{ opacity: 0 }}
-							transition={{ duration: 0.2 }}
+							transition={{ duration: 0.4 }}
 							className="flex flex-col items-center gap-4"
 						>
-							<div className="space-y-4 w-full flex items-center justify-center">
+							<div className="space-y-2 w-full flex flex-col items-center justify-center">
 								<InputOTP
 									maxLength={6}
 									value={otp}
@@ -227,6 +240,19 @@ export function AuthForm() {
 										<InputOTPSlot index={5} />
 									</InputOTPGroup>
 								</InputOTP>
+								{otpError && (
+									<m.div
+										initial={{ opacity: 0, y: 10 }}
+										animate={{ opacity: 1, y: 0 }}
+										exit={{ opacity: 0, y: -10 }}
+										transition={{ duration: 0.2, ease: "easeOut" }}
+										className="text-destructive ml-1.5 flex items-center gap-1.5 text-left text-sm"
+									>
+										<CircleAlert size={14} />
+
+										<span>{otpError}</span>
+									</m.div>
+								)}
 							</div>
 							<p className="text-sm text-muted-foreground">
 								Didn&apos;t receive the code?{" "}
@@ -234,8 +260,8 @@ export function AuthForm() {
 									variant="link"
 									size="sm"
 									className="px-0 text-sm"
-									onClick={() => setStep(1)}
-									disabled={isSubmittingOtp}
+									onClick={() => onEmailSubmit({ email: emailForm.getValues("email") })}
+									disabled={isSubmittingOtp || isLoading}
 								>
 									Resend
 								</Button>

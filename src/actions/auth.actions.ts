@@ -22,6 +22,7 @@ export async function sendOTP(data: SendOTP) {
   try {
     const result = requireValidation(SendOTPSchema, data);
     if (!result.success) {
+      console.log(result);
       return result;
     }
 
