@@ -4,13 +4,7 @@ import { useForm } from "react-hook-form";
 import Image from "next/image";
 import { useState } from "react";
 import { AnimatePresence, easeOut, motion as m, stagger } from "motion/react";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,7 +37,7 @@ const item = {
 };
 
 export function AuthForm() {
-	'use no memo';
+	"use no memo";
 	const [step, setStep] = useState(1);
 	const [otp, setOtp] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
@@ -64,12 +58,17 @@ export function AuthForm() {
 		if (result.success) {
 			setStep(2);
 		} else {
-			const errorResult = result as any;
-			const errorMessage = errorResult.issues?.email?.[0] || errorResult.message || "An unknown error occurred.";
-			emailForm.setError("email", {
-				type: "server",
-				message: errorMessage,
-			});
+			if ("issues" in result && result.issues.email) {
+				emailForm.setError("email", {
+					type: "manual",
+					message: result.issues.email.join(", "),
+				});
+			} else {
+				emailForm.setError("email", {
+					type: "manual",
+					message: "Failed to send OTP. Please try again.",
+				});
+			}
 		}
 		setIsLoading(false);
 	};
@@ -84,8 +83,11 @@ export function AuthForm() {
 			router.push("/");
 			router.refresh();
 		} else {
-			const errorResult = result as any;
-			setOtpError(errorResult.message || "Failed to verify OTP.");
+			if ("issues" in result && result.issues.code) {
+				setOtpError(result.issues.code.join(", "));
+			} else {
+				setOtpError("Invalid OTP. Please try again.");
+			}
 			setOtp("");
 		}
 		setIsSubmittingOtp(false);
@@ -111,7 +113,9 @@ export function AuthForm() {
 						transition={{ duration: 0.4 }}
 						className="w-full flex flex-col items-center space-y-2"
 					>
-						<h1 className="text-xl font-semibold">Welcome to App</h1>
+						<h1 className="text-xl font-semibold">
+							Welcome to App
+						</h1>
 						<p className="text-base text-muted-foreground">
 							Enter your email to continue.
 						</p>
@@ -126,7 +130,9 @@ export function AuthForm() {
 						transition={{ duration: 0.4 }}
 						className="w-full flex flex-col items-center space-y-2"
 					>
-						<h1 className="text-xl font-semibold">Check your email</h1>
+						<h1 className="text-xl font-semibold">
+							Check your email
+						</h1>
 						<p className="text-base text-muted-foreground text-center">
 							We&apos;ve sent a 6-character code to{" "}
 							<span className="font-semibold text-foreground">
@@ -142,14 +148,20 @@ export function AuthForm() {
 					{step === 1 && (
 						<m.div
 							key="email-step"
-							exit={{ opacity: 0, y: -10, willChange: "transform, opacity" }}
+							exit={{
+								opacity: 0,
+								y: -10,
+								willChange: "transform, opacity",
+							}}
 							transition={{ duration: 0.4 }}
 						>
 							<Form {...emailForm}>
 								<m.form
 									variants={item}
 									className="space-y-4 text-center"
-									onSubmit={emailForm.handleSubmit(onEmailSubmit)}
+									onSubmit={emailForm.handleSubmit(
+										onEmailSubmit,
+									)}
 								>
 									<FormField
 										control={emailForm.control}
@@ -162,48 +174,77 @@ export function AuthForm() {
 														{...field}
 														inputSize="lg"
 														onChange={(e) => {
-															field.onChange(e)
-															emailForm.clearErrors()
+															field.onChange(e);
+															emailForm.clearErrors();
 														}}
 													/>
 												</FormControl>
 
 												<AnimatePresence mode="popLayout">
-													{emailForm.formState.errors.email?.message && (
+													{emailForm.formState.errors
+														.email?.message && (
 														<m.div
-															initial={{ opacity: 0, y: 10 }}
-															animate={{ opacity: 1, y: 0 }}
-															exit={{ opacity: 0, y: -10 }}
-															transition={{ duration: 0.2, ease: "easeOut" }}
+															initial={{
+																opacity: 0,
+																y: 10,
+															}}
+															animate={{
+																opacity: 1,
+																y: 0,
+															}}
+															exit={{
+																opacity: 0,
+																y: -10,
+															}}
+															transition={{
+																duration: 0.2,
+																ease: "easeOut",
+															}}
 															className="text-destructive ml-1.5 flex items-center gap-1.5 text-left text-sm"
 														>
-															<CircleAlert size={14} />
-															<span>{emailForm.formState.errors.email.message}</span>
+															<CircleAlert
+																size={14}
+															/>
+															<span>
+																{
+																	emailForm
+																		.formState
+																		.errors
+																		.email
+																		.message
+																}
+															</span>
 														</m.div>
 													)}
 												</AnimatePresence>
 											</FormItem>
 										)}
 									/>
-									<Button type="submit" size="lg" className="w-full" disabled={isLoading} asChild>
+									<Button
+										type="submit"
+										size="lg"
+										className="w-full"
+										disabled={isLoading}
+										asChild
+									>
 										<m.button
 											className="transition-none"
 											layout
 											transition={{
 												layout: {
-													type: 'tween',
-													ease: 'easeInOut',
+													type: "tween",
+													ease: "easeInOut",
 													duration: 0.2,
 												},
 											}}
 										>
-											{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+											{isLoading && (
+												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+											)}
 											Continue
 										</m.button>
 									</Button>
-
 								</m.form>
-
 							</Form>
 						</m.div>
 					)}
@@ -245,7 +286,10 @@ export function AuthForm() {
 										initial={{ opacity: 0, y: 10 }}
 										animate={{ opacity: 1, y: 0 }}
 										exit={{ opacity: 0, y: -10 }}
-										transition={{ duration: 0.2, ease: "easeOut" }}
+										transition={{
+											duration: 0.2,
+											ease: "easeOut",
+										}}
 										className="text-destructive ml-1.5 flex items-center gap-1.5 text-left text-sm"
 									>
 										<CircleAlert size={14} />
@@ -260,7 +304,11 @@ export function AuthForm() {
 									variant="link"
 									size="sm"
 									className="px-0 text-sm"
-									onClick={() => onEmailSubmit({ email: emailForm.getValues("email") })}
+									onClick={() =>
+										onEmailSubmit({
+											email: emailForm.getValues("email"),
+										})
+									}
 									disabled={isSubmittingOtp || isLoading}
 								>
 									Resend
@@ -270,6 +318,6 @@ export function AuthForm() {
 					)}
 				</AnimatePresence>
 			</div>
-		</m.div >
+		</m.div>
 	);
 }
