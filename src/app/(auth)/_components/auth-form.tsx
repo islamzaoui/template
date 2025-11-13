@@ -1,21 +1,21 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import Image from "next/image";
-import { useState } from "react";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
+import { CircleAlert, Loader2, Mail } from "lucide-react";
 import { AnimatePresence, easeOut, motion as m, stagger } from "motion/react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { sendOTP, verifyOTP } from "@/actions/auth.actions";
+import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
 	InputOTP,
 	InputOTPGroup,
 	InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { REGEXP_ONLY_DIGITS } from "input-otp";
-import { CircleAlert, Loader2 } from "lucide-react";
-import { sendOTP, verifyOTP } from "@/actions/auth.actions";
-import { useRouter } from "next/navigation";
 
 const container = {
 	hidden: {},
@@ -100,9 +100,59 @@ export function AuthForm() {
 			initial="hidden"
 			animate="show"
 		>
-			<m.div variants={item} style={{ willChange: "transform, opacity" }}>
-				<Image src="/logo.svg" alt="Logo" width={42} height={42} />
-			</m.div>
+			<AnimatePresence mode="wait">
+				{step === 1 && (
+					<m.div
+						key="logo"
+						variants={item}
+						style={{ willChange: "transform, opacity" }}
+						exit={{
+							scaleY: 0.7,
+							scaleX: 1.1,
+							opacity: 0,
+							transformOrigin: "center",
+							transition: {
+								duration: 0.12,
+								ease: "easeInOut",
+							},
+						}}
+					>
+						<Image
+							src="/logo.svg"
+							alt="Logo"
+							width={42}
+							height={42}
+						/>
+					</m.div>
+				)}
+				{step === 2 && (
+					<m.div
+						key="email-icon"
+						initial={{
+							scaleY: 0.3,
+							scaleX: 0.8,
+							opacity: 0,
+							transformOrigin: "center",
+						}}
+						animate={{
+							scaleY: 1,
+							scaleX: 1,
+							opacity: 1,
+						}}
+						transition={{
+							type: "spring",
+							stiffness: 120,
+							damping: 6,
+							mass: 0.5,
+							duration: 0.12,
+						}}
+						style={{ willChange: "transform, opacity" }}
+						className="flex items-center justify-center rounded-full p-3 bg-primary/10"
+					>
+						<Mail className="size-8 text-primary" />
+					</m.div>
+				)}
+			</AnimatePresence>
 			<AnimatePresence mode="wait">
 				{step === 1 && (
 					<m.div
