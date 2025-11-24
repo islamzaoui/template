@@ -1,0 +1,83 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  engineType   = "client"
+  runtime      = "nodejs"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  producer
+  buyer
+  transporter
+}
+
+model User {
+  id          String            @id @default(nanoid())
+  email       String            @unique
+  fullname    String?
+  phone       String?
+  wilayaId    Int?
+  cityId      Int?
+  role        Role?
+  producer    ProducerInfo?
+  buyer       BuyerInfo?
+  transporter TransporterInfo?
+  sessions    Session[]
+  otp         OneTimePassword[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model ProducerInfo {
+  id           String @id @default(nanoid())
+  user         User   @relation(fields: [id], references: [id])
+  address      String
+  farmerCardId String
+}
+
+model BuyerInfo {
+  id   String @id @default(nanoid())
+  user User   @relation(fields: [id], references: [id])
+}
+
+enum VehicleType {
+  CAR
+  MOTORCYCLE
+  TRUCK
+  VAN
+  REFRIGERATED_TRUCK
+  REFRIGERATED_VAN
+}
+
+model TransporterInfo {
+  id               String      @id @default(nanoid())
+  user             User        @relation(fields: [id], references: [id])
+  licenseNumber    String
+  plateNumber      String
+  vehicleType      VehicleType
+  loadCapacityInKg Int
+  vehiclePhoto     String?
+}
+
+model OneTimePassword {
+  id        String   @id @default(nanoid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  code      String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model Session {
+  id             String   @id
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  secretHash     Bytes    @unique
+  createdAt      DateTime @default(now())
+  lastVerifiedAt DateTime @default(now())
+}
