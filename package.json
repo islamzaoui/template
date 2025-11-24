@@ -2,7 +2,7 @@
 	"name": "template",
 	"private": true,
 	"scripts": {
-		"prepare": "husky",
+		"prepare": "husky && bun db:generate",
 		"dev": "next dev",
 		"build": "next build",
 		"start": "next start",
