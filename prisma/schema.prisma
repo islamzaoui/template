@@ -21,8 +21,6 @@ model User {
   email       String            @unique
   fullname    String?
   phone       String?
-  wilayaId    Int?
-  cityId      Int?
   role        Role?
   producer    ProducerInfo?
   buyer       BuyerInfo?
@@ -34,10 +32,12 @@ model User {
 }
 
 model ProducerInfo {
-  id           String @id @default(nanoid())
-  user         User   @relation(fields: [id], references: [id])
-  address      String
-  farmerCardId String
+  id                  String @id @default(nanoid())
+  user                User   @relation(fields: [id], references: [id])
+  wilayaId            Int
+  cityId              Int
+  address             String
+  farmerLicenseNumber String
 }
 
 model BuyerInfo {
