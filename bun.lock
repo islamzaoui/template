@@ -6,7 +6,9 @@
       "name": "template",
       "dependencies": {
         "@orpc/client": "^1.11.3",
+        "@orpc/contract": "^1.11.3",
         "@orpc/openapi": "^1.11.3",
+        "@orpc/openapi-client": "^1.11.3",
         "@orpc/server": "^1.11.3",
         "@orpc/zod": "^1.11.3",
         "@prisma/adapter-pg": "^7.0.0",

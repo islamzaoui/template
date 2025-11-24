@@ -40,22 +40,24 @@ const sessionWithUserSchema = z.object({
 
 const getMe = os
 	.route({ path: "/", method: "GET" })
+	.errors({
+		UNAUTHORIZED: {
+			status: 401,
+			message: "You must be logged in to access this resource.",
+		},
+	})
 	.output(
-		z.union([
-			z.object({ success: z.literal(false) }),
-			z.object({
-				success: z.literal(true),
-				session: sessionWithUserSchema,
-			}),
-		]),
+		z.object({
+			session: sessionWithUserSchema,
+		}),
 	)
-	.handler(async ({ context }) => {
+	.handler(async ({ context, errors }) => {
 		const { sessionWithUser: session } = context;
 		if (!session) {
-			return { success: false };
+			throw errors.UNAUTHORIZED;
 		}
 
-		return { success: true, session };
+		return { session };
 	});
 
 const meActions = os.prefix("/me").router({

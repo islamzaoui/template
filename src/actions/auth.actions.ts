@@ -20,53 +20,44 @@ const sendOTPAction = os
 		}),
 	)
 	.output(
-		z.union([
-			z.object({ success: z.literal(true) }),
-			z.object({
-				success: z.literal(false),
-				code: z.literal("INTERNAL_SERVER_ERROR"),
-			}),
-		]),
+		z.object({
+			message: z.literal("OTP sent successfully."),
+		}),
 	)
 	.handler(async ({ input }) => {
-		try {
-			const { email } = input;
+		const { email } = input;
 
-			const user = await prisma.user.upsert({
-				where: { email },
-				update: {},
-				create: { email },
+		const user = await prisma.user.upsert({
+			where: { email },
+			update: {},
+			create: { email },
+		});
+
+		const oneTimePassword = await prisma.$transaction(async (tx) => {
+			await tx.oneTimePassword.deleteMany({
+				where: { userId: user.id },
 			});
 
-			const oneTimePassword = await prisma.$transaction(async (tx) => {
-				await tx.oneTimePassword.deleteMany({
-					where: { userId: user.id },
-				});
+			const code = generateOTP();
+			const expiresAt = new Date(
+				Date.now() +
+					VERIFICATION_CODE_EXPIRATION_IN_MINUTES * 60 * 1000,
+			);
 
-				const code = generateOTP();
-				const expiresAt = new Date(
-					Date.now() +
-						VERIFICATION_CODE_EXPIRATION_IN_MINUTES * 60 * 1000,
-				);
-
-				const oneTimePassword = await tx.oneTimePassword.create({
-					data: { userId: user.id, code, expiresAt },
-				});
-
-				return oneTimePassword;
+			const oneTimePassword = await tx.oneTimePassword.create({
+				data: { userId: user.id, code, expiresAt },
 			});
 
-			await sendOTPEmail({
-				to: user.email,
-				code: oneTimePassword.code,
-				expirationInMinutes: VERIFICATION_CODE_EXPIRATION_IN_MINUTES,
-			});
+			return oneTimePassword;
+		});
 
-			return { success: true };
-		} catch (err) {
-			console.error("Error in sendOTP handler:", err);
-			return { success: false, code: "INTERNAL_SERVER_ERROR" };
-		}
+		await sendOTPEmail({
+			to: user.email,
+			code: oneTimePassword.code,
+			expirationInMinutes: VERIFICATION_CODE_EXPIRATION_IN_MINUTES,
+		});
+
+		return { message: "OTP sent successfully." };
 	});
 
 const verifyOTPAction = os
@@ -77,63 +68,51 @@ const verifyOTPAction = os
 			code: z.string().length(6),
 		}),
 	)
-	.output(
-		z.union([
-			z.object({ success: z.literal(true), token: z.string() }),
-			z.object({
-				success: z.literal(false),
-				code: z.union([
-					z.literal("INTERNAL_SERVER_ERROR"),
-					z.literal("INVALID_OTP"),
-				]),
-			}),
-		]),
-	)
-	.handler(async ({ context, input }) => {
-		try {
-			const { email, code } = input;
-			const oneTimePassword = await prisma.oneTimePassword.findFirst({
-				where: {
-					code,
-					user: { email },
-					expiresAt: { gt: new Date() },
-				},
-			});
+	.errors({
+		INVALID_OTP: {
+			status: 400,
+			message:
+				"The provided one-time password is invalid or has expired.",
+		},
+	})
+	.output(z.object({ token: z.string() }))
+	.handler(async ({ context, input, errors }) => {
+		const { email, code } = input;
+		const oneTimePassword = await prisma.oneTimePassword.findFirst({
+			where: {
+				code,
+				user: { email },
+				expiresAt: { gt: new Date() },
+			},
+		});
 
-			if (!oneTimePassword) {
-				return {
-					success: false,
-					code: "INVALID_OTP",
-				};
-			}
-
-			void prisma.oneTimePassword.deleteMany({
-				where: { userId: oneTimePassword.userId },
-			});
-
-			const session = await createSession(oneTimePassword.userId);
-
-			context.cookies.set("session_token", session.token, {
-				name: COOKIE_NAME,
-				httpOnly: true,
-				maxAge: INACTIVE_TIMEOUT_IN_SECONDS,
-				sameSite: "lax",
-				secure: env.NODE_ENV === "production",
-			});
-
-			return { success: true, token: session.token };
-		} catch (err) {
-			console.error("Error in verifyOTP handler:", err);
-			return { success: false, code: "INTERNAL_SERVER_ERROR" };
+		if (!oneTimePassword) {
+			throw errors.INVALID_OTP;
 		}
+
+		void prisma.oneTimePassword.deleteMany({
+			where: { userId: oneTimePassword.userId },
+		});
+
+		const session = await createSession(oneTimePassword.userId);
+
+		context.cookies.set("session_token", session.token, {
+			name: COOKIE_NAME,
+			httpOnly: true,
+			maxAge: INACTIVE_TIMEOUT_IN_SECONDS,
+			sameSite: "lax",
+			secure: env.NODE_ENV === "production",
+		});
+
+		return { token: session.token };
 	});
 
 const logoutAction = os
 	.route({ path: "/logout", method: "GET" })
-	.output(z.object({ success: z.literal(true) }))
+	.output(z.object({ message: z.literal("Logged out successfully.") }))
 	.handler(async ({ context }) => {
 		context.cookies.delete(COOKIE_NAME);
-		return { success: true };
+		return { message: "Logged out successfully." };
 	});
 
 const authActions = os.prefix("/auth").router({
