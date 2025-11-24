@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { SendOtpForm } from "@/components/forms/send-otp-form";
 import { VerifyOtpForm } from "@/components/forms/verify-otp-form";
@@ -14,6 +15,7 @@ import {
 type AuthStep = "send-otp" | "verify-otp";
 
 export default function AuthPage() {
+	const router = useRouter();
 	const [step, setStep] = React.useState<AuthStep>("send-otp");
 	const [email, setEmail] = React.useState<string>("");
 
@@ -23,10 +25,8 @@ export default function AuthPage() {
 	};
 
 	const handleOtpVerified = () => {
-		// Redirect to dashboard or home page after successful verification
-		// For now, just reset to send-otp
-		setStep("send-otp");
-		setEmail("");
+		// Redirect to dashboard after successful verification
+		router.push("/dashboard");
 	};
 
 	return (
